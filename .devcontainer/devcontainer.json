@@ -3,16 +3,23 @@
   "dockerComposeFile": "../docker-compose.yml",
   "service": "eden",
   "workspaceFolder": "/var/www/html",
-  "extensions": [
-    "bmewburn.vscode-intelephense-client",
-    "amiralizadeh9480.laravel-extra-intellisense",
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
-    "formulahendry.code-runner",
-    "ms-vscode.vscode-typescript-next"
-  ],
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "amiralizadeh9480.laravel-extra-intellisense",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "formulahendry.code-runner",
+        "ms-vscode.vscode-typescript-next",
+        "DEVSENSE.composer-php-vscode",
+        "rangav.vscode-thunder-client",
+        "Gruntfuggly.todo-tree"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      }
+    }
   },
   "postCreateCommand": "composer install && npm install"
 }
