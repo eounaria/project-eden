@@ -12,6 +12,20 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+Route::get('/test', function () {
+    return view('test');
+})->name('test');
+
+Route::get('/api/market-test', function () {
+    return [
+        ["day" => "Mon", "price" => 20],
+        ["day" => "Tue", "price" => 35],
+        ["day" => "Wed", "price" => 28],
+        ["day" => "Thu", "price" => 40],
+        ["day" => "Fri", "price" => 32],
+    ];
+});
+
 Route::get('dashboard', function () {
     return Inertia::render('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -40,5 +54,12 @@ Route::post('/sms/incoming', [SmsController::class, 'incoming'])->name('sms.inco
 
 //     return response($response)->header('Content-Type', 'text/xml');
 // });
+
+Route::get('/produce', function () {
+    return [
+        ["id" => 1, "name" => "Tomato", "price" => 30],
+        ["id" => 2, "name" => "Rice", "price" => 50],
+    ];
+});
 
 require __DIR__.'/settings.php';

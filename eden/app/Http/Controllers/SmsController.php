@@ -86,7 +86,9 @@ class SmsController extends Controller
             EOT;
             $response = new MessagingResponse();
             $response->message($message);
-            Log::info("Eden: $message");
+            foreach (explode("\n", $message) as $line) {
+                Log::info("Eden: $line");
+            }
             Log::info("=== SMS Conversation End ===");
             return response($response)->header('Content-Type', 'text/xml');
         }
