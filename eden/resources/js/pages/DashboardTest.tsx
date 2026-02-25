@@ -63,9 +63,6 @@
 //     </Grid>
 //   );
 // }
-import { useEffect, useState } from "react";
-import api from "@/lib/axios";
-
 // MUI
 import {
   Card,
@@ -74,6 +71,8 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
+
+import { useEffect, useState } from "react";
 
 // Recharts
 import {
@@ -84,6 +83,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
+import api from "@/lib/axios";
 
 interface MarketData {
   day: string;

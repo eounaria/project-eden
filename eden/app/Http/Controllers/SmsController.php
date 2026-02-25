@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\TwilioService;
 use App\Services\ProduceService;
+use App\Services\SmsListingService;
+use App\Services\TwilioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Twilio\TwiML\MessagingResponse;
@@ -12,11 +13,13 @@ class SmsController extends Controller
 {
     protected $twilio;
     protected $produceService;
+    protected $smsListingService;
 
-    public function __construct(TwilioService $twilio, ProduceService $produceService)
+    public function __construct(TwilioService $twilio, ProduceService $produceService, SmsListingService $smsListingService)
     {
         $this->twilio = $twilio;
         $this->produceService = $produceService;
+        $this->smsListingService = $smsListingService;
     }
 
     protected function controlListings($from, $command, $attributes)
@@ -25,25 +28,18 @@ class SmsController extends Controller
             // Expected format for attributes: <produce> <quantity><unit> <price> <location> listed by <name>
             // example: tomatoes 100kg 20php Laguna listed by Juan
 
-            // Log::info("Parsing listing attributes: " . json_encode($attributes));
-            preg_match('/^(\d+(?:\.\d+)?)([a-zA-Z]+)$/', $attributes[1] ?? '', $quantityUnit);
-            preg_match('/^(\d+(?:\.\d+)?)([a-zA-Z]+)$/', $attributes[2] ?? '', $priceCurrency);
-
-            $listingData = [
-                'farmer_phone' => $from,
-                'produce' => $attributes[0] ?? null,
-                'quantity' => intval($quantityUnit[1] ?? 0),
-                'unit' => $quantityUnit[2] ?? null,
-                'price_per_unit' => floatval($priceCurrency[1] ?? 0),
-                'location' => $attributes[3] ?? null,
-                'farmer_name' => end($attributes) ?? null,
-            ];
-
-            // Log::info("Parsed listing data: " . json_encode($quantityUnit));
-            Log::info("Creating listing: " . json_encode($listingData));
+            $listingData = $this->smsListingService->parseMakeCommand($from, $attributes);
             $response = $this->produceService->createListing($listingData);
 
             return $response;
+        }
+
+        if ($command === 'show') {
+            // Expected format for attributes: <produce> <location: nullable> by <name: nullable>
+            // example: tomatoes Laguna by Juan
+
+            $showRequest = $this->smsListingService->parseShowCommand($attributes);
+
         }
     }
 

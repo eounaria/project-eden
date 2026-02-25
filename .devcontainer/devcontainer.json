@@ -13,6 +13,9 @@
         "formulahendry.code-runner",
         "ms-vscode.vscode-typescript-next",
         "DEVSENSE.composer-php-vscode",
+        "DEVSENSE.phptools-vscode",
+        "DEVSENSE.profiler-php-vscode",
+        "DEVSENSE.intelli-php-vscode",
         "rangav.vscode-thunder-client",
         "Gruntfuggly.todo-tree"
       ],
