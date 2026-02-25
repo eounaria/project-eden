@@ -7,14 +7,8 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::get('/', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
+    return view('app');
 })->name('home');
-
-Route::get('/test', function () {
-    return view('test');
-})->name('test');
 
 Route::get('/api/market-test', function () {
     return [
@@ -25,10 +19,6 @@ Route::get('/api/market-test', function () {
         ["day" => "Fri", "price" => 32],
     ];
 });
-
-Route::get('dashboard', function () {
-    return Inertia::render('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/test-sms', function(TwilioService $twilio){
     // Replace with your phone number (must be verified in Twilio trial)
