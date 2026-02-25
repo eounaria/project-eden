@@ -30,4 +30,10 @@ class ProduceService
 
         return $query->get();
     }
+
+    public function updateListing(ProduceListing $produceListing, array $updateRequest)
+    {
+        $produceListing->update($updateRequest);
+        return ['success' => true, 'listing' => $produceListing];
+    }
 }

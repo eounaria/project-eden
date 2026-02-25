@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 class SmsListingService
 {
-    public function parseMakeCommand($from, $attributes)
+    public function parseMakeCommand(String $from, array $attributes)
     {
         // Expected format for attributes: <produce> <quantity><unit> <price> <location> listed by <name>
         // example: tomatoes 100kg 20php Laguna listed by Juan
@@ -30,7 +30,7 @@ class SmsListingService
         return $listingData;
     }
 
-    public function parseShowCommand($attributes)
+    public function parseShowCommand(array $attributes)
     {
         // Expected format for attributes: of <produce: nullable> in <location: nullable> by <name> in <location>
         // example: of tomatoes in Laguna
@@ -42,7 +42,7 @@ class SmsListingService
             'location' => null,
             'farmer_name' => null,
         ];
-        
+
         if (in_array('of', $attributes)) {
             $showRequest['produce'] = $attributes[array_search('of', $attributes) + 1] ?? null;
         }
@@ -56,5 +56,43 @@ class SmsListingService
         }
 
         return $showRequest;
+    }
+
+    public function parseUpdateCommand(array $attributes)
+    {
+        // Expected format for attributes: <listing_id> UnitQuantity: <<quantity><unit>: nullable> price: <price: nullable> location: <location: nullable>
+        // example: ListingId 12 UnitQuantity: 100kg price: 20php location: Laguna
+        // example: ListingId 12 UnitQuantity: 9000g
+        // example: ListingId 12 price: 20php location: Laguna
+        // example: ListingId 12 location: Laguna
+
+        $data = [];
+
+        if (in_array('unitquantity:', $attributes)) {
+            preg_match(
+                '/^(\d+(?:\.\d+)?)([a-zA-Z]+)$/',
+                $attributes[array_search('unitquantity:', $attributes) + 1] ?? '',
+                $quantityUnit
+            );
+            $data['quantity'] = intval($quantityUnit[1] ?? null);
+            $data['unit'] = $quantityUnit[2] ?? null;
+        }
+
+        if (in_array('price:', $attributes)) {
+            preg_match(
+                '/^(\d+(?:\.\d+)?)([a-zA-Z]+)?$/',
+                $attributes[array_search('price:', $attributes) + 1] ?? '',
+                $priceCurrency
+            );
+            $data['price_per_unit'] = floatval($priceCurrency[1] ?? null);
+        }
+
+        if (in_array('location:', $attributes)) {
+            $data['location'] = $attributes[array_search('location:', $attributes) + 1] ?? null;
+        }
+
+        $updateRequest = ["id" => $attributes[0], "data" => $data];
+
+        return $updateRequest;
     }
 }

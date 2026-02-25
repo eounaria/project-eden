@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProduceListing;
 use App\Services\ProduceService;
 use App\Services\SmsListingService;
 use App\Services\TwilioService;
@@ -47,7 +48,6 @@ class SmsController extends Controller
                 Price per unit: {$listing->price_per_unit}
                 Location: {$listing->location}
                 Farmer Name: {$listing->farmer_name}
-                Farmer Phone: {$listing->farmer_phone}
             EOT;
 
             $response = ['success' => true, 'message' => $message];
@@ -56,14 +56,16 @@ class SmsController extends Controller
         }
 
         if ($command === 'show') {
-            // Expected format for attributes: <produce> <location: nullable> by <name: nullable>
-            // example: tomatoes Laguna by Juan
+            // Expected format for attributes: of <produce: nullable> in <location: nullable> by <name> in <location>
+            // example: of tomatoes in Laguna
+            // example: by Juan
+            // example: in Juan
 
             $showRequest = $this->smsListingService->parseShowCommand($attributes);
             $listings = $this->produceService->showListings($showRequest);
             $listingsArray = [];
             foreach ($listings as $listing) {
-                $listingsArray[] = 
+                $listingsArray[] =
                     <<<EOT
                     ==================
                     ID: {$listing->id}
@@ -72,11 +74,46 @@ class SmsController extends Controller
                     Price per unit: {$listing->price_per_unit}
                     Location: {$listing->location}
                     Farmer Name: {$listing->farmer_name}
-                    Farmer Phone: {$listing->farmer_phone}
                     ==================
                     EOT;
             }
             $message = "Listings: \n" . implode("\n", $listingsArray) . "\nTo request purchase, specify the listing ID";
+
+            $response = ['success' => true, 'message' => $message];
+
+            return $response;
+        }
+
+        if ($command === 'update') {
+            // Expected format for attributes: <listing_id> UnitQuantity: <<quantity><unit>: nullable> price: <price: nullable> location: <location: nullable>
+            // example: ListingId 12 UnitQuantity: 100kg price: 20php location: Laguna
+            // example: ListingId 12 UnitQuantity: 100kg
+            // example: ListingId 12 price: 20php location: Laguna
+            // example: ListingId 12 location: Laguna
+
+            $updateRequest = $this->smsListingService->parseUpdateCommand($attributes);
+
+            $produceListing = ProduceListing::find($updateRequest['id']);
+
+            $updateListingResponse = $this->produceService->updateListing($produceListing, $updateRequest['data']);
+
+            if (!$updateListingResponse['success']) {
+                Log::error("Eden: Failed to update ListingID $updateRequest[id]");
+                Log::error("=== SMS Conversation End ===");
+
+                $response = ['success' => false, 'message' => "Failed to update listing. Please check your command format and try again."];
+
+                return $response;
+            }
+            $listing = $updateListingResponse['listing'];
+            $message = <<<EOT
+            ListingID {$listing->id} updated successfully!
+                Produce: {$listing->produce}
+                Quantity: {$listing->quantity} {$listing->unit}
+                Price per unit: {$listing->price_per_unit}
+                Location: {$listing->location}
+                Farmer Name: {$listing->farmer_name}
+            EOT;
 
             $response = ['success' => true, 'message' => $message];
 
@@ -104,7 +141,11 @@ class SmsController extends Controller
 
         Log::info("$from ($senderName): $body");
 
-        if (str_contains($body, 'listing')) {
+        if (
+            str_contains($body, 'listing') ||
+            str_contains($body, 'listings') ||
+            str_contains($body, 'listingid')
+        ) {
             $listingResponse = $this->controlListings($from, $tokens['command'], $tokens['attributes']);
 
             $message = $listingResponse['message'] ?? "Sorry, we couldn't process your request. Please check your command format and try again.";
