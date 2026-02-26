@@ -2,15 +2,23 @@
 
 namespace App\Services;
 
+use App\Models\SmsConversation;
 use App\Services\ProduceService;
+use Illuminate\Support\Facades\Log;
 
 class SmsConversationService
 {
-    public function deleteListingConversation(String $userResponse, array $data)
+    protected $produceService;
+
+    public function __construct(ProduceService $produceService)
     {
-        $produceService = app(ProduceService::class);
+        $this->produceService = $produceService;
+    }
+
+    protected function deleteListingConversation(String $userResponse, array $data)
+    {
         if ($userResponse === 'yes') {
-            $produceService->deleteListing($data['listing_id']);
+            $this->produceService->deleteListing($data['listing_id']);
             $message = "ListingId {$data['listing_id']} deleted successfully.";
         } elseif ($userResponse === 'no') {
             $message = "Deletion of ListingID {$data['listing_id']} cancelled.";
@@ -25,6 +33,28 @@ class SmsConversationService
         return [
             'success' => true,
             'message' => $message,
+        ];
+    }
+
+    public function controlConversations(SmsConversation $conversation, String $userResponse, String $action, array $data)
+    {
+        Log::info("----------------------------");
+        Log::info("user: $userResponse");
+        Log::info("----------------------------");
+
+        if ($action === 'delete_listing') {
+            $conversationResponse = $this->deleteListingConversation($userResponse, $data);
+        }
+
+        if ($conversationResponse['success']) {
+            $conversation->update(['status' => 'completed']);
+        } elseif ($conversationResponse['success'] === false) {
+            $conversationResponse['success'] = 'pending';
+        }
+
+        return $conversationResponse ?? [
+            'success' => false,
+            'message' => "Invalid conversation action.",
         ];
     }
 }
