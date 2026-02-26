@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
+Route::get('/{any}', function () {
     return view('app');
-})->name('home');
+})->where('any', '.*');
 
 Route::get('/api/market-test', function () {
     return [
