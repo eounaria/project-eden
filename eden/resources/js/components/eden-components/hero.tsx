@@ -43,7 +43,7 @@ export default function Hero() {
                         '&:hover': { backgroundColor: '#ffc700' },
                     }}
                 >
-                    Get Started
+                    See Listings
                 </Button>
             </Box>
         </Box>
