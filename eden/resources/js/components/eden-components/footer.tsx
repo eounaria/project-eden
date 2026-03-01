@@ -5,12 +5,12 @@ export default function Footer() {
         <Box
             sx={{
                 mt: 8,
-                backgroundColor: '#c7c9e1',
+                backgroundColor: '#000',
                 borderTopLeftRadius: '2rem',
                 borderTopRightRadius: '2rem',
                 pt: 6,
                 pb: 6,
-                color: '#000',
+                color: '#fff',
             }}
         >
             <Container maxWidth="lg">
