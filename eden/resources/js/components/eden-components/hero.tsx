@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Box, Typography, Button } from '@mui/material';
 
 export default function Hero() {
@@ -35,6 +36,8 @@ export default function Hero() {
                     Harvest Smart. Sell Smarter.
                 </Typography>
                 <Button
+                    component={Link}
+                    to="/listings"
                     variant="contained"
                     sx={{
                         backgroundColor: '#ffd700',
