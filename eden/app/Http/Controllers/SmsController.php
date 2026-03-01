@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SmsConversation;
 use App\Services\ProduceService;
+use App\Services\SmsConversationService;
 use App\Services\SmsListingService;
+use App\Services\SmsOngoingTransactionService;
+use App\Services\SmsTransactionRequestService;
 use App\Services\TwilioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,109 +17,131 @@ class SmsController extends Controller
 {
     protected $twilio;
     protected $produceService;
+    protected $smsConversationService;
     protected $smsListingService;
+    protected $smsOngoingTransactionService;
+    protected $smsTransactionRequestService;
 
-    public function __construct(TwilioService $twilio, ProduceService $produceService, SmsListingService $smsListingService)
-    {
+    public function __construct(
+        TwilioService $twilio,
+        ProduceService $produceService,
+        SmsConversationService $smsConversationService,
+        SmsListingService $smsListingService,
+        SmsOngoingTransactionService $smsOngoingTransactionService,
+        SmsTransactionRequestService $smsTransactionRequestService
+    ) {
         $this->twilio = $twilio;
         $this->produceService = $produceService;
+        $this->smsConversationService = $smsConversationService;
         $this->smsListingService = $smsListingService;
-    }
-
-    protected function controlListings($from, $command, $attributes)
-    {
-        if ($command === 'make') {
-            // Expected format for attributes: <produce> <quantity><unit> <price> <location> listed by <name>
-            // example: tomatoes 100kg 20php Laguna listed by Juan
-
-            $listingData = $this->smsListingService->parseMakeCommand($from, $attributes);
-            $makeListingResponse = $this->produceService->createListing($listingData);
-
-            if (!$makeListingResponse['success']) {
-                Log::error("Eden: Failed to create listing for farmer $from");
-                Log::error("=== SMS Conversation End ===");
-
-                $response = ['success' => false, 'message' => "Failed to create listing. Please check your command format and try again."];
-
-                return $response;
-            }
-            $listing = $makeListingResponse['listing'];
-            $message = <<<EOT
-            Listing created successfully!
-                Produce: {$listing->produce}
-                Quantity: {$listing->quantity} {$listing->unit}
-                Price per unit: {$listing->price_per_unit}
-                Location: {$listing->location}
-                Farmer Name: {$listing->farmer_name}
-                Farmer Phone: {$listing->farmer_phone}
-            EOT;
-
-            $response = ['success' => true, 'message' => $message];
-
-            return $response;
-        }
-
-        if ($command === 'show') {
-            // Expected format for attributes: <produce> <location: nullable> by <name: nullable>
-            // example: tomatoes Laguna by Juan
-
-            $showRequest = $this->smsListingService->parseShowCommand($attributes);
-            $listings = $this->produceService->showListings($showRequest);
-            $listingsArray = [];
-            foreach ($listings as $listing) {
-                $listingsArray[] = 
-                    <<<EOT
-                    ==================
-                    ID: {$listing->id}
-                    Produce: {$listing->produce}
-                    Quantity: {$listing->quantity} {$listing->unit}
-                    Price per unit: {$listing->price_per_unit}
-                    Location: {$listing->location}
-                    Farmer Name: {$listing->farmer_name}
-                    Farmer Phone: {$listing->farmer_phone}
-                    ==================
-                    EOT;
-            }
-            $message = "Listings: \n" . implode("\n", $listingsArray) . "\nTo request purchase, specify the listing ID";
-
-            $response = ['success' => true, 'message' => $message];
-
-            return $response;
-        }
+        $this->smsOngoingTransactionService = $smsOngoingTransactionService;
+        $this->smsTransactionRequestService = $smsTransactionRequestService;
     }
 
     public function incoming(Request $request)
     {
+        $response = [
+            'success' => false,
+            'message' => "Invalid request.",
+        ];
 
         $from = $request->input('From');
 
         $body = strtolower($request->input('Body'));
 
-        Log::info("=== SMS Conversation Start ===");
+        $conversation = SmsConversation::where('farmer_phone', $from)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
 
-        // Expected format: command listing attributes
+        if (is_null($conversation)) {
+            Log::info("=== SMS Conversation Start ===");
+        } else {
+            $conversationResponse = $this->smsConversationService->controlConversations($conversation, $body);
+
+            $message = $conversationResponse['message'] ?? "Sorry, we couldn't process your response.";
+
+            $response = [
+                'success' => $conversationResponse['success'],
+                'message' => $message,
+            ];
+        }
+
+        // Expected format: command action attributes
         // example: make listing tomatoes 100kg 20php Laguna listed by Juan
         $words = explode(' ', $body);
         $tokens = [
             'command' => $words[0] ?? null,
             'attributes' => array_slice($words, 2) ?? null,
         ];
-        $senderName = end($tokens['attributes']);
 
-        Log::info("$from ($senderName): $body");
-
-        if (str_contains($body, 'listing')) {
-            $listingResponse = $this->controlListings($from, $tokens['command'], $tokens['attributes']);
-
-            $message = $listingResponse['message'] ?? "Sorry, we couldn't process your request. Please check your command format and try again.";
-
-            $response = new MessagingResponse();
-            $response->message($message);
-            foreach (explode("\n", $message) as $line) {
-                Log::info("Eden: $line");
+        if (
+            str_contains($body, 'transactionrequest') ||
+            str_contains($body, 'transactionrequests') ||
+            str_contains($body, 'transactionrequestid')
+        ) {
+            $transactionRequestResponse = $this->smsTransactionRequestService->controlTransactionRequests($from, $tokens['command'], $tokens['attributes']);
+            if (!$transactionRequestResponse['success'] || $transactionRequestResponse['success'] != 'pending') {
+                Log::error("Eden: Failed to process command for farmer $from");
+                Log::error("=== SMS Conversation End ===");
             }
-            Log::info("=== SMS Conversation End ===");
-            return response($response)->header('Content-Type', 'text/xml');
+
+            $response = [
+                'success' => $transactionRequestResponse['success'],
+                'message' => $transactionRequestResponse['message'] ?? "Sorry, we couldn't process your request.",
+            ];
+
+        } elseif (
+            str_contains($body, 'ongoingtransaction') ||
+            str_contains($body, 'ongoingtransactions') ||
+            str_contains($body, 'ongoingtransactionid')
+        ) {
+            $ongoingTransactionResponse = $this->smsOngoingTransactionService->controlOngoingTransactions($from, $tokens['command'], $tokens['attributes']);
+            if (!$ongoingTransactionResponse['success'] || $ongoingTransactionResponse['success'] != 'pending') {
+                Log::error("Eden: Failed to process command for farmer $from");
+                Log::error("=== SMS Conversation End ===");
+            }
+
+            $response = [
+                'success' => $ongoingTransactionResponse['success'],
+                'message' => $ongoingTransactionResponse['message'] ?? "Sorry, we couldn't process your request.",
+            ];
+
+        } elseif (
+            str_contains($body, 'listing') ||
+            str_contains($body, 'listings') ||
+            str_contains($body, 'listingid')
+        ) {
+            $listingResponse = $this->smsListingService->controlListings($from, $tokens['command'], $tokens['attributes']);
+            if (!$listingResponse['success'] || $listingResponse['success'] != 'pending') {
+                Log::error("Eden: Failed to process command for farmer $from");
+                Log::error("=== SMS Conversation End ===");
+            }
+
+            $response = [
+                'success' => $listingResponse['success'],
+                'message' => $message = $listingResponse['message'] ?? "Sorry, we couldn't process your request.",
+            ];
+
         }
+
+        $reply = new MessagingResponse();
+        $reply->message($response['message'] ?? "Sorry, we couldn't process your request.");
+
+        if ($response['message'] === "Invalid request.") {
+            Log::info("user: $body");
+
+        }
+
+        foreach (explode("\n", $response['message'] ?? "") as $line) {
+            Log::info("Eden: $line");
+
+        }
+        if (is_bool($response['success'])) {
+            Log::info("=== SMS Conversation End ===");
+
+        }
+
+        return response($reply)->header('Content-Type', 'text/xml');
     }
 }
