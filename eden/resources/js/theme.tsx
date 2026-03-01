@@ -3,7 +3,7 @@ import { createTheme } from '@mui/material/styles';
 const edenTheme = createTheme({
     palette: {
         background: {
-            default: '#255527',
+            default: '#2e6a30',
             paper: '#c7c9e1',
         },
         primary: {
@@ -17,6 +17,17 @@ const edenTheme = createTheme({
             main: '#35777a',
             dark: '#5d9294',
             contrastText: '#000',
+        },
+    },
+    typography: {
+        fontFamily: "'Inter', sans-serif",
+
+        h1: {
+            fontFamily: "'Helvetica', sans-serif",
+        },
+
+        h4: {
+            fontFamily: "'monospace', sans-serif",
         },
     },
 });
