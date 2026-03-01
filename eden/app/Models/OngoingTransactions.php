@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TransactionRequests extends Model
+class OngoingTransactions extends Model
 {
     protected $fillable = [
         'from',
