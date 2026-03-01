@@ -7,6 +7,7 @@ export default function AppLayout() {
             <NavBar pages={[
                     ['Home', '/'],
                     ['Listings', '/listings'],
+                    ['Dashboard', '/dashboard'],
                 ]}
             />
             <Outlet />

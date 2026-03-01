@@ -23,18 +23,20 @@ interface ProduceListing {
 
 interface ProduceListingProps {
     produce: string;
+    location: string;
 }
 
-export default function ProduceListingTable({ produce }: ProduceListingProps) {
+export default function ProduceListingTable({ produce, location }: ProduceListingProps) {
     const [data, setData] = useState<ProduceListing[]>([]);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     useEffect(() => {
-        api.get<ProduceListing[]>('/produce-listings/' + produce).then((response) => {
+        if (!produce || !location) return;
+        api.get<ProduceListing[]>('/produce-listings/' + produce + '/' + location).then((response) => {
             setData(response.data);
         });
-    }, [produce]);
+    }, [produce, location]);
 
     // handle page change
     const handleChangePage = (event: unknown, newPage: number) => {
@@ -88,7 +90,7 @@ export default function ProduceListingTable({ produce }: ProduceListingProps) {
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[5, 10, 25]}
+                rowsPerPageOptions={[10, 25, 50]}
             />
         </Paper>
     );

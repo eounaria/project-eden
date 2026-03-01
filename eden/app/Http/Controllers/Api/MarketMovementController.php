@@ -19,6 +19,7 @@ class MarketMovementController extends Controller
 
     public function getMarketMovementRecords(String $type, String $produce, ?String $location = null)
     {
+        if ($location === "all") $location = null;
         if ($type === 'price') {
             $response = $this->marketMovementService->getPriceMovementRecords($produce, $location);
         }

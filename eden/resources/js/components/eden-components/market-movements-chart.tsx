@@ -21,12 +21,14 @@ interface MovementChartProps {
     movementType: string;
     movementUnit: string;
     produce: string;
+    produceLocation: string;
 }
 
 export default function MarketMovementsChart({
     movementType,
     movementUnit,
     produce,
+    produceLocation,
 }: MovementChartProps) {
     const [supplyData, setSupplyData] = useState<SupplyData[]>([]);
     const [locations, setLocations] = useState<string[]>([]);
@@ -43,7 +45,7 @@ export default function MarketMovementsChart({
 
     useEffect(() => {
         api.get<SupplyData[]>(
-            '/market-movement-records/' + movementType + '/' + produce,
+            '/market-movement-records/' + movementType + '/' + produce + '/' + produceLocation,
         ).then((response) => {
             setSupplyData(response.data);
 
@@ -56,7 +58,7 @@ export default function MarketMovementsChart({
             );
             setLocations(locations);
         });
-    }, [movementType, movementUnit, produce]);
+    }, [movementType, movementUnit, produce, produceLocation]);
 
     const YAxisLabel = movementType + '(' + movementUnit + ')';
 

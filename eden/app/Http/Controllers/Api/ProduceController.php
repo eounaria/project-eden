@@ -20,9 +20,14 @@ class ProduceController extends Controller
         return response()->json($this->produceService->getProduceNames());
     }
 
-    public function showListings(?String $produce = null, String $orderDirection = 'asc')
+    public function getLocations()
     {
-        $showRequest = ['produce' => $produce, 'farmer_name' => null, 'location' => null];
+        return response()->json($this->produceService->getLocations());
+    }
+
+    public function showListings(?String $produce = null, ?String $location = null, String $orderDirection = 'asc')
+    {
+        $showRequest = ['produce' => $produce, 'farmer_name' => null, 'location' => $location];
         return response()->json($this->produceService->showListings($showRequest, $orderDirection));
     }
 }
